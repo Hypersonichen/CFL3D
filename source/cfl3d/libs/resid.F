@@ -34,6 +34,9 @@ c
 #   else
       use module_kwstm, only: kws_main,kws_dump_movie
 #   endif
+#ifdef HYBRID
+      use module_dissipation
+#endif
 c
 c     $Id$
 c
@@ -85,6 +88,9 @@ c     dimension vmu(jdim-1,idim-1),vmuj1(kdim-1,idim-1)
       dimension mblk2nd(maxbl),idefrm(maxbl),iadvance(maxbl)
       dimension qavg(jdim,kdim,idim,5)
       dimension sumn(nummem),negn(nummem)
+#ifdef HYBRID
+      type(dissArr),target:: tempVector
+#endif
 c
       common /avgdata/ xnumavg,iteravg,xnumavg2,ipertavg,iclcd,isubit_r
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
@@ -120,8 +126,19 @@ c
       common /des/ cdes,ides,cddes
       common /memry/ lowmem_ux
       common /constit/ i_nonlin,c_nonlin,snonlin_lim,i_tauijs,i_qcr2000,
-     .                 i_qcr2013,i_qcr2013v
+     .                 i_qcr2013
       common /reystressmodel/ issglrrw2012,i_sas_rsm,i_yapterm
+#ifdef SAMPLING
+      common /parasamp/ n_sampling
+#endif
+#ifdef HYBRID
+      allocate( tempVector%fai(jdim,kdim,idim) )
+c      allocate( tfai(jdim,kdim,idim) )
+      allocate( tempVector%dqx(jdim,kdim,idim-1,5),
+     .          tempVector%dqy(jdim,kdim,idim-1,5),
+     .          tempVector%dqz(jdim,kdim,idim-1,5) )
+      dissArr_blks(nbl)%pv=>tempVector
+#endif
 c
       jdim1 = jdim-1
       kdim1 = kdim-1
@@ -944,6 +961,42 @@ c   *********
       end if
       end if
       end if
+#ifdef HYBRID
+cc
+cc    添加人工粘性
+cc
+      if(ifds(1).eq.2.or.ifds(2).eq.2.or.ifds(3).eq.2)then
+cc     L.Chen:
+      call solve_fai5(jdim,kdim,idim,q,qj0,qk0,qi0,sj,sk,si,vol,
+c     .                bcj,bck,bci,tfai)
+     .                bcj,bck,bci,tempVector%fai)
+ccc     .                bcj,bck,bci,dissArr_blks(nbl)%pv%fai)
+      call artif4(jdim,kdim,idim,q,qj0,qk0,qi0,bci,
+     .            bcj,bck,sj,sk,si,
+     .            dissArr_blks(nbl)%pv%dqx,
+     .            dissArr_blks(nbl)%pv%dqy,
+     .            dissArr_blks(nbl)%pv%dqz)
+      endif
+c#ifndef DIST_MPI
+      if(icyc.eq.ncyc.and.nt.eq.ntstep.and.level.ge.lglobal)then
+cc      if (icyc.eq.(icyc/1)*1 .and. level.ge.lglobal .and. ntime.le.nit)
+c      call faiout(jdim,kdim,idim,x,y,z,dissArr_blks(nbl)%pv%fai)
+      call faiout(jdim,kdim,idim,x,y,z,tempVector%fai,myid)
+c      call faiout(jdim,kdim,idim,x,y,z,tfai,myid)
+      write(*,*)"faiout....."
+      endif
+c#endif
+#endif
+#ifdef SAMPLING
+      n_sampling = 50
+      if(icyc.eq.ncyc.and.
+     .(mod(ntt,n_sampling).eq.0).and.level.ge.lglobal.and.
+     .ntime.le.nit)then
+      call sampling(jdim,kdim,idim,x,y,z,q,myid,ntt)
+c-- Remember: ntt is the accumulated time steps --c
+      write(*,*)"Sampling (ntt)..... at ntt=",ntt," nt=",nt
+      endif
+#endif 
 c
 c      residuals  res = r(q)
 c
@@ -1005,7 +1058,11 @@ c
       jbctyp(2) = jbcinfo(nbl,1,1,2)
       call gfluxr(i,npl,rkap(2),jdim,kdim,idim,res,q,qj0,sj,wk,nvtq,
      .            nv,nfajki(1),wfa,iwfa(niwfac),jbctyp,isf,nbl,bcj,
-     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl))
+     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl)
+#ifdef HYBRID
+     .            ,tempVector%dqy,tempVector%fai
+#endif
+     .)
   200 continue
       end if
 c
@@ -1058,7 +1115,11 @@ c
       kbctyp(2) = kbcinfo(nbl,1,1,2)
       call hfluxr(i,npl,rkap(3),jdim,kdim,idim,res,q,qk0,sk,wk,nvtq, 
      .            nv,nfajki(2),wfa,iwfa(niwfac),kbctyp,isf,nbl,bck,
-     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl))
+     .            nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,idefrm(nbl)
+#ifdef HYBRID
+     .            ,tempVector%dqz,tempVector%fai
+#endif
+     .)
   210 continue
       end if
 c
@@ -1115,7 +1176,11 @@ c
          call ffluxr(k,npl,rkap(1),jdim,kdim,idim,res,q,qi0,si,wk,
      .               nvtq,nv,nfajki(3),wfa,iwfa(niwfac),ibctyp,isf,
      .               nbl,bci,nou,bou,nbuf,ibufdim,myid,mblk2nd,maxbl,
-     .               idefrm(nbl))
+     .               idefrm(nbl)
+#ifdef HYBRID
+     .            ,tempVector%dqx,tempVector%fai
+#endif
+     .)
   300    continue
          end if
 c
@@ -1304,5 +1369,12 @@ c   during restarts, because the PLOT3D output is in conserved form)
         end if
       end if
       end if
+#ifdef HYBRID
+      deallocate( tempVector%fai )
+c      deallocate( tfai )
+      deallocate( tempVector%dqx,
+     .            tempVector%dqy,
+     .            tempVector%dqz )
+#endif
       return 
       end

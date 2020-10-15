@@ -99,7 +99,8 @@ FSRC_LIBS = \
         my_flush.F     bc2016.F       gfluxv1.F      hfluxv1.F \
         ffluxv1.F      sijrate2d.F    threeeqn.F     lesdiag.F \
         sijrate3d.F    foureqn.F      bc2026.F       bc2019.F \
-        u_doubleprime.F bc2010.F
+        u_doubleprime.F bc2010.F \
+        solve_fai.F    dissipation.F  inviscid.F     sampling.F 
 F90SRC_LIBS = module_profileout.F90 module_contour.F90  module_kwstm.F90 module_stm_2005.F90
 
 FSRC_SPEC = addx.F
@@ -113,7 +114,7 @@ F90OBJ_LIBS = $(F90SRC_LIBS:.F90=.o)
 COMMONLIB = libcommon.a
 
 initvist.o: module_kwstm.o
-resid.o: module_kwstm.o
+resid.o: module_kwstm.o dissipation.o
 init.o:  module_kwstm.o
 module_kwstm.o: module_profileout.o
 bc2005.o: module_stm_2005.o

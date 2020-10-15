@@ -22,7 +22,11 @@ c  ---------------------------------------------------------------------------
 c
       subroutine hfluxr(i,npl,xkap,jdim,kdim,idim,res,q,qk0,sk,t,nvtq,
      .                  nv,nfa,wfa,iwfa,kbctyp,isf,nbl,bck,nou,bou,nbuf,
+#ifdef HYBRID    
+     .                  ibufdim,myid,mblk2nd,maxbl,idef,dqz,fai)
+#else
      .                  ibufdim,myid,mblk2nd,maxbl,idef)
+#endif
 c
 c     $Id$
 c
@@ -44,6 +48,10 @@ c
       dimension q(jdim,kdim,idim,5),qk0(jdim,idim-1,5,4)
       dimension res(jdim,kdim,idim-1,5),bck(jdim,idim-1,2)
       dimension t(nvtq,nv),mblk2nd(maxbl)
+#ifdef HYBRID
+      dimension dqz(jdim,kdim,idim-1,5)
+      dimension fai(jdim,kdim,idim)
+#endif
 c
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
       common /cpurate/ rate(5),ratesub(5),ncell(20)
@@ -320,6 +328,22 @@ c
       call fhat(sk(1,i,1),sk(1,i,2),sk(1,i,3),sk(1,i,4),sk(1,i,5),
      .          t(1,31),t(1,26),t(1,21),n,nvtq) 
 c
+#ifdef HYBRID
+      else if (ifds(3).eq.2) then
+c
+      if (isklton.gt.0 .and. i.eq.1) then
+         nou(1) = min(nou(1)+1,ibufdim)
+         write(bou(nou(1),1),*)
+     .'Chen: computing inviscid fluxes,K-direction-2 order
+     . central difference'
+      end if
+      call fhybrid2(sk(1,i,1),sk(1,i,2),sk(1,i,3),sk(1,i,4),
+     .              sk(1,i,5),t(1,31),t(1,26),t(1,21),n,nvtq,
+     .              fai(1,1,i))
+
+#endif
+
+
       else
 c
       if (isklton.gt.0 .and. i.eq.1) then
@@ -397,12 +421,33 @@ c
  7055 continue
       end if
 c
+#ifdef HYBRID
+c -----------
+      if(ifds(3).ge.2)then
+cccccccc
+      do l=1,5
+cdir$ ivdep
+      do izz=1,nr
+        if(fai(izz,1,i).eq.0.0)then
+      res(izz,1,i,l) = res(izz,1,i,l)+t(izz+jdim,30+l)-t(izz,30+l)
+     .                 +dqz(izz,1,i,l)
+        else
+        res(izz,1,i,l) = res(izz,1,i,l)+t(izz+jdim,30+l)-t(izz,30+l)
+        endif
+      enddo !izz
+      enddo !l
+cccccccc
+      else
+#endif
       do 450 l=1,5
 cdir$ ivdep
       do 1014 izz=1,nr
       res(izz,1,i,l) = res(izz,1,i,l)+t(izz+jdim,30+l)-t(izz,30+l)
  1014 continue
   450 continue
+#ifdef HYBRID
+      endif  !ifds
+#endif
 c
 c     geometric conservation law terms for deforming grids
 c

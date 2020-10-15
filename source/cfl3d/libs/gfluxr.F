@@ -22,7 +22,11 @@ c  ---------------------------------------------------------------------------
 c
       subroutine gfluxr(i,npl,xkap,jdim,kdim,idim,res,q,qj0,sj,t,nvtq,
      .                  nv,nfa,wfa,iwfa,jbctyp,isf,nbl,bcj,nou,bou,nbuf,
+#ifdef HYBRID
+     .                  ibufdim,myid,mblk2nd,maxbl,idef,dqy,fai)
+#else
      .                  ibufdim,myid,mblk2nd,maxbl,idef)
+#endif
 c
 c     $Id$
 c
@@ -44,6 +48,10 @@ c
       dimension q(jdim,kdim,idim,5),qj0(kdim,idim-1,5,4)
       dimension res(jdim,kdim,idim-1,5),bcj(kdim,idim-1,2)
       dimension t(nvtq,nv),mblk2nd(maxbl)
+#ifdef HYBRID
+      dimension dqy(jdim,kdim,idim-1,5)
+      dimension fai(jdim,kdim,idim)
+#endif
 c
       common /fluid/ gamma,gm1,gp1,gm1g,gp1g,ggm1
       common /cpurate/ rate(5),ratesub(5),ncell(20)
@@ -318,6 +326,18 @@ c
       call fhat(sj(1,i,1),sj(1,i,2),sj(1,i,3),sj(1,i,4),sj(1,i,5),
      .          t(1,31),t(1,26),t(1,21),jkpro,nvtq) 
 c
+#ifdef HYBRID
+      else if(ifds(2).eq.2)then
+c
+      if (isklton.gt.0 .and. i.eq.1) then
+         nou(1) = min(nou(1)+1,ibufdim)
+         write(bou(nou(1),1),*)
+     .'Chen: computing inviscid fluxes,J-direction-2 order
+     . central difference'
+      end if
+      call fhybrid2(sj(1,i,1),sj(1,i,2),sj(1,i,3),sj(1,i,4),sj(1,i,5),
+     .          t(1,31),t(1,26),t(1,21),jkpro,nvtq,fai(1,1,i))
+#endif
       else
 c
       if (isklton.gt.0 .and. i.eq.1) then
@@ -395,12 +415,38 @@ c
  7055 continue
       end if
 c
+#ifdef HYBRID
+c----------------------------------------------------------------
+c  
+c    注意：当izz=jdim...时，所得到的res(jdim,1,i,l)的值
+c          是无效的(因为t(jdim+1)-t(jdim)是没有物理意义的)，
+c          不过这个值也是无用的，因为以后仅用到的res()的值是
+c          在1<=j<=jdim1范围内的值。
+c
+      if(ifds(2).ge.2)then
+cccccccc
+      do l=1,5
+cdir$ ivdep
+      do izz = 1,nr
+        if(fai(izz,1,i).eq.0.0)then
+      res(izz,1,i,l) = t(izz+1,30+l)-t(izz,30+l)+
+     .                 dqy(izz,1,i,l)
+        else
+      res(izz,1,i,l) = t(izz+1,30+l)-t(izz,30+l)
+        endif
+      enddo !izz
+      enddo !l
+      else
+#endif
       do 450 l=1,5
 cdir$ ivdep
       do 1014 izz=1,nr
       res(izz,1,i,l) = t(izz+1,30+l)-t(izz,30+l)
  1014 continue
   450 continue
+#ifdef HYBRID
+      endif
+#endif
 c
 c     geometric conservation law terms for deforming grids
 c

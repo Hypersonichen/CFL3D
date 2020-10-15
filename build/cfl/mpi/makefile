@@ -40,7 +40,8 @@ FSRC_DIST = \
 	yplusout.F     sizer.F        cfl3d.F        trnsfr_vals.F \
 	updatedg.F     ae_corr.F      mgbl.F         setslave.F \
 	umalloc.F      reass.F        qoutavg.F      plot3davg.F \
-        qout_coarse.F  qout_2d.F      plot3d_2d.F    plot3d_coarse.F
+        qout_coarse.F  qout_2d.F      plot3d_2d.F    plot3d_coarse.F \
+        qout_chen.F    plot3d_chen.F
 
 FSRC_SPEC =
 
@@ -59,6 +60,8 @@ qout.o: ../libs/module_kwstm.o ../libs/module_profileout.o ../libs/module_contou
 pointers.o: ../libs/module_kwstm.o
 mgbl.o: ../libs/module_kwstm.o
 setup.o: ../libs/module_kwstm.o
+cfl3d.o: ../libs/dissipation.o
+mgblk.o: ../libs/dissipation.o
 
 $(FOBJ_DIST): $(HEAD_DIST)
 	$(FTN) $(CPPOPT) $(FFLAG) -c $*.F

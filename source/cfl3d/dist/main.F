@@ -354,6 +354,9 @@ c
       common /key/ nkey
       common /zero/ iexp
       common /wrestq/ irest,irest2
+c#ifdef SAMPLING
+c      common /parasamp/ n_sampling
+c#endif
 #   ifdef FASTIO
       common/rjbdbgi/lunfio0
       lunfio0=8000
@@ -701,7 +704,13 @@ c
          open(unit=96,file=avgg,form='unformatted',status='unknown')
          open(unit=97,file=avgq,form='unformatted',status='unknown')
       end if
-
+c#ifdef SAMPLING
+c      open(unit=910,file="sampling.inp",form='formatted',status='old')
+c      read(910,*) ! Number of sampling interval
+c      read(910,*) n_sampling
+c      write(*,*) n_sampling
+c      close(910) 
+c#endif
       nblocks_clcd = 0
       n_clcd = 0
       if (iclcd .eq. 1 .or. iclcd .eq. 2) then

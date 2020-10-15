@@ -36,6 +36,9 @@ c
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
+#   ifdef HYBRID
+      use module_dissipation
+#   endif
 c
 #if defined DIST_MPI
 c
@@ -55,6 +58,10 @@ c
 #   endif
       dimension istat(MPI_STATUS_SIZE)
 #endif
+
+c#ifdef HYBRID
+c      type(pDissArr),allocatable:: dissArr_blks(:)
+c#endif
 c
       character*80 bcfiles(mxbcfil)
       character*120 bou(ibufdim,nbuf)
@@ -1028,6 +1035,9 @@ c
       call umalloc((mptch+2)*(mptch+2)*msub1,0,'zte',memuse,stats)
       allocate( irdrea(maxgr),stat=stats )
       call umalloc(maxgr,1,'irdrea',memuse,stats)
+#ifdef HYBRID
+      allocate (dissArr_blks(maxbl))
+#endif
 c
 c***********************************************************************
 c     initialize output buffer
@@ -1422,6 +1432,10 @@ c
          deallocate(gforcs)
          deallocate(aehist)
          deallocate(timekeep)
+#ifdef HYBRID
+      deallocate( dissArr_blks )
+      write(*,*) "dealloc ... seems ok so far"
+#endif
          if (myid.eq.myhost) then
             write(11,'(/,'' memory for cfl3d has been deallocated'')')
          end if

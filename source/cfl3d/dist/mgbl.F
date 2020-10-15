@@ -286,6 +286,9 @@ c
       common /bin/ ibin,iblnk,iblnkfr,ip3dgrad
       common /deformz/ beta1,beta2,alpha1,alpha2,isktyp,negvol,meshdef,
      .                 nsprgit,ndgrd,ndwrt 
+c#ifdef SAMPLING
+c      common /parasamp/ n_sampling
+c#endif
 
       allocatable :: rmstr(:,:)
       allocatable :: nneg(:,:)

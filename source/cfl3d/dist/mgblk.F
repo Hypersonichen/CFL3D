@@ -84,6 +84,9 @@ c
 #   ifdef CMPLX
       implicit complex(a-h,o-z)
 #   endif
+#ifdef HYBRID 
+      use module_dissipation
+#endif
 c
 #if defined DIST_MPI
 #     include "mpif.h"
@@ -118,6 +121,8 @@ c
       character*120 bou(ibufdim,nbuf)
       character*80  bcfiles(mxbcfil)
       character*32 basedesired
+!!!!!!!!!!!!! ---- Mark to test ... Chen!!!!!!!!!!!!!!!!!!!
+      character*4 charmov
 c
       integer lout(msub1),xif1(msub1),xif2(msub1),etf1(msub1),
      .        etf2(msub1),ifrom(msub1)
@@ -685,7 +690,7 @@ c     of subiteration loop
 c
       ioutsub = ncyc
 c
-c     loop over time steps
+c     loop over time steps  ------------------------ L. Chen ----------------------
 c
       do 6000 nt=1,ntstep
 c
@@ -788,7 +793,7 @@ c
      .             ,' time step ',i5)
          end if
        end if
-
+clc ------------------------------------------------------------------------
          do nbl = 1,nblock
             if (myid.eq.mblk2nd(nbl) .and. (levelg(nbl).ge.lglobal .and.
      .         levelg(nbl).le.levelt(iseq))) then
@@ -803,7 +808,7 @@ c
                end if
             end if
          end do
-c
+clc ------------------------------------------------------------------------
          iupdat = 1
          call updateg(lw,lw2,w,mgwk,wk,nwork,iupdat,iseq,maxbl,
      .                maxgr,maxseg,nbci0,nbcj0,nbck0,nbcidim,
@@ -3014,6 +3019,27 @@ c
                   do iii = 1,nwork
                      wk(iii) = 0.0
                   end do
+c!!!!!!!!!!!!! ---- Mark to test ... Chen!!!!!!!!!!!!!!!!!!!
+c      !character*4 charmov
+c      write(charmov(1:4),'(i4.4)')nt
+cc
+cc     open plot3d/printout files
+cc
+c      if (myid.eq.myhost) then
+cc
+c      if (ibin.eq.1) then
+cc      open(unit=3,file=plt3dg,form='unformatted',status='unknown')
+c      open(unit=4,file=trim(plt3dq)//'_'//charmov,
+c     .form='unformatted') !,status='unknown')
+c      else
+cc         open(unit=3,file=plt3dg,form='formatted',status='unknown')
+c         open(unit=4,file=trim(plt3dq)//'_'//charmov,
+c     .form='formatted') !,status='unknown')
+c      end if
+cc      open(unit=17,file=printout,form='formatted',status='unknown')
+cc
+c      end if
+c!!!!!!!!!!!!! ---- Mark to test ... Chen!!!!!!!!!!!!!!!!!!!
                   call qout(iseq,lw,lw2,w,mgwk,wk,nwork,
      .                 nplots,iovrlp,iibg,kkbg,jjbg,ibcg,lbg,
      .                 ibpntsg,qb,lwdat,nbci0,nbcj0,nbck0,
@@ -3236,7 +3262,7 @@ c
 c
 
  6000 continue
-c
+c ------------------------------------ L. Chen -----------------------------------
  6011 continue
 c
       if (myid.eq.myhost) then

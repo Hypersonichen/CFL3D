@@ -103,11 +103,11 @@ c
 c     timing for workstations
 c
 #if defined ETFLAG
-      call etime_(tm)
-      call itime_(ia)
+clc      call etime_(tm)
+clc      call itime_(ia)
 #else
-      call etime(tm)
-      call itime(ia)
+clc      call etime(tm)
+clc      call itime(ia)
 #endif
 c
       tm(3) = ia(3) +60*(ia(2) +60*ia(1))
